@@ -47,11 +47,7 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
             date,
             position: { x: e.clientX, y: e.clientY },
         });
-
-        // можно хранить доступные дни прямо в состоянии, если не хочешь пересчитывать в рендере поповера
     };
-
-
 
 
     if (employees.length === 0) {
@@ -64,9 +60,7 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
 
     return (
         <div className="overflow-x-auto bg-gray-900 rounded-xl shadow-lg border border-gray-700">
-            {/* Заголовок */}
             <div className="p-4 border-b border-gray-700 bg-gray-800 flex justify-between items-center rounded-t-xl">
-                {/* Слева — селектор года + диапазон месяцев */}
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
                         <label className="text-xs text-gray-300 font-light">Год:</label>
@@ -84,14 +78,12 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                         </select>
                     </div>
 
-                    {/* диапазон месяцев */}
                     <div className="flex items-center space-x-2">
                         <label className="text-xs text-gray-300 font-light">Месяцы:</label>
                         <select
                             value={startMonth}
                             onChange={(e) => {
                                 const newStart = Number(e.target.value);
-                                // гарантируем минимум 2 месяца
                                 if (endMonth - newStart < 1) {
                                     setEndMonth(newStart + 1);
                                 }
@@ -110,7 +102,6 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                             value={endMonth}
                             onChange={(e) => {
                                 const newEnd = Number(e.target.value);
-                                // гарантируем минимум 2 месяца
                                 if (newEnd - startMonth < 1) {
                                     setStartMonth(newEnd - 1);
                                 }
@@ -127,7 +118,6 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                     </div>
                 </div>
 
-                {/* Справа — инфо */}
                 <div className="flex flex-col items-end text-xs space-y-1">
           <span className="text-gray-300 font-light">
             Расчет на: {currentDate.toLocaleDateString('ru-RU')}
@@ -138,7 +128,6 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                 </div>
             </div>
 
-            {/* Таблица */}
             <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse text-gray-200">
                     <thead>
@@ -204,11 +193,9 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                             key={employee.id}
                             className="hover:bg-gray-800 transition-colors duration-150"
                         >
-                            {/* Имя сотрудника */}
                             <td className="sticky left-0 z-10 px-3 py-2 whitespace-nowrap text-xs uppercase font-medium text-gray-100 bg-gray-900 border-r border-gray-700">
                                 {employee.name}
                             </td>
-                            {/* Доступные дни в формате XXX (YYY) */}
                             <td className="px-2 py-2 text-center text-xs font-medium border-r border-gray-700">
             <span className="text-green-400 font-semibold">
                 {employee.vacation.availableDays.toFixed(1)}
