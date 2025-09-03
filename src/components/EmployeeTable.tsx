@@ -1,5 +1,6 @@
 import { EmployeeWithVacation } from '../types';
 import { useState } from 'react';
+import {isPublicHoliday} from "@/lib/database";
 
 interface EmployeeTableProps {
     employees: EmployeeWithVacation[];
@@ -119,7 +120,7 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                             Сотрудник
                         </th>
                         <th
-                            className="px-3 py-3 text-left text-xs font-semibold text-gray-300 uppercase border-r border-gray-700"
+                            className="px-3 py-3 text-center text-xs font-semibold text-gray-300 uppercase border-r border-gray-700"
                             rowSpan={2}
                         >
                             Доступно
@@ -144,6 +145,7 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                                     dayNumber
                                 );
                                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                                const holiday = isPublicHoliday(date);
 
                                 return (
                                     <th
@@ -151,9 +153,11 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                                         className={`text-center text-[11px] font-medium border border-gray-700
                         w-8 h-6 min-w-[32px]
                         ${
-                                            isWeekend
-                                                ? 'bg-red-900/60 text-red-400'
-                                                : 'bg-gray-900 text-gray-400'
+                                            holiday
+                                                ? 'bg-yellow-900/60 text-yellow-300'
+                                                : isWeekend
+                                                    ? 'bg-red-900/60 text-red-400'
+                                                    : 'bg-gray-900 text-gray-400'
                                         }`}
                                     >
                                         {dayNumber}
@@ -170,19 +174,18 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                             key={employee.id}
                             className="hover:bg-gray-800 transition-colors duration-150"
                         >
-                            <td className="sticky left-0 z-10 px-2 py-2 whitespace-nowrap text-xs uppercase font-medium text-gray-100 bg-gray-900 border-r border-gray-700">
+                            {/* Имя сотрудника */}
+                            <td className="sticky left-0 z-10 px-3 py-2 whitespace-nowrap text-xs uppercase font-medium text-gray-100 bg-gray-900 border-r border-gray-700">
                                 {employee.name}
                             </td>
+                            {/* Доступные дни в формате XXX (YYY) */}
                             <td className="px-2 py-2 text-center text-xs font-medium border-r border-gray-700">
-                  <span
-                      className={
-                          employee.vacation.availableDays > 0
-                              ? 'text-green-400'
-                              : 'text-gray-500'
-                      }
-                  >
-                    {employee.vacation.availableDays.toFixed(1)}
-                  </span>
+            <span className="text-green-400 font-semibold">
+                {employee.vacation.availableDays.toFixed(1)}
+            </span>
+                                <span className="text-blue-400">
+                {' '}({employee.vacation.availableAdditionalDays.toFixed(1)})
+            </span>
                             </td>
 
                             {visibleMonths.map((monthData) =>
@@ -194,15 +197,24 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                                         dayNumber
                                     );
                                     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                                    const holiday = isPublicHoliday(date);
 
                                     return (
                                         <td
                                             key={`${monthData.month}-day-${dayNumber}`}
                                             className={`text-center text-[11px] border border-gray-700 
-                                                w-8 h-6 min-w-[32px] cursor-pointer
-                                                ${isWeekend ? 'bg-red-900/60' : 'bg-gray-900'}
-                                                hover:bg-blue-900 transition-colors duration-100`}
-                                            title={`${dayNumber} ${monthData.monthName} ${selectedYear}`}
+        w-8 h-6 min-w-[32px] cursor-pointer
+        ${
+                                                holiday
+                                                    ? 'bg-yellow-900/60 text-yellow-300'
+                                                    : isWeekend
+                                                        ? 'bg-red-900/60 text-red-400'
+                                                        : 'bg-gray-900 text-gray-400'
+                                            }
+        hover:bg-blue-900 transition-colors duration-100`}
+                                            title={`${dayNumber} ${monthData.monthName} ${selectedYear} ${
+                                                holiday ? '(Праздник)' : ''
+                                            }`}
                                         ></td>
                                     );
                                 })
@@ -214,21 +226,35 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
             </div>
 
             <div className="p-4 border-t border-gray-700 bg-gray-800 rounded-b-xl">
-                <div className="text-xs text-gray-300 flex items-center space-x-4">
+                <div className="text-xs text-gray-300 flex flex-wrap items-center gap-4">
                     <div>
                         <strong>Пояснение:</strong> Таблица отображает календарь отпусков на{' '}
                         {selectedYear} год
                     </div>
+
                     <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 bg-red-900 border border-red-700 rounded-sm"></div>
+                        <div className="w-4 h-4 bg-red-900/60 border border-red-700 rounded-sm"></div>
                         <span>Выходные дни</span>
                     </div>
+
+                    <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-yellow-900/60 border border-yellow-700 rounded-sm"></div>
+                        <span>Праздничные дни</span>
+                    </div>
+
                     <div className="flex items-center space-x-2">
                         <div className="w-4 h-4 bg-gray-900 border border-gray-700 rounded-sm"></div>
                         <span>Рабочие дни</span>
                     </div>
-                    <div className="text-green-400 font-semibold">
-                        Доступно: дни отпуска на текущую дату
+
+                    <div className="flex items-center space-x-2">
+                        <span className="text-green-400 font-semibold">XXX</span>
+                        <span>- основные дни отпуска</span>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                        <span className="text-blue-400">(YYY)</span>
+                        <span>- дополнительные дни</span>
                     </div>
                 </div>
             </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import EmployeeTable from '../components/EmployeeTable';
 import { EmployeeWithVacation } from '../types';
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Home() {
     const [employees, setEmployees] = useState<EmployeeWithVacation[]>([]);
@@ -48,6 +49,9 @@ export default function Home() {
                     {error}
                 </div>
             )}
+            <div className="flex justify-end mb-4">
+                <ThemeToggle />
+            </div>
 
                 <EmployeeTable employees={employees} />
         </div>

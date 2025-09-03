@@ -3,6 +3,7 @@ export interface PositionChange {
     toDate: string | null;
     position: string;
     vacationDaysPerYear: number;
+    additionalDaysPerYear: number;
 }
 
 export interface Employee {
@@ -12,12 +13,16 @@ export interface Employee {
     hireDate: string;
     vacationDaysPerYear: number;
     usedVacationDays: number;
+    usedAdditionalDays: number;
     positionChanges: PositionChange[];
 }
 
 export interface VacationCalculation {
     earnedDays: number;
     availableDays: number;
+    additionalDays: number;
+    availableAdditionalDays: number;
+    totalAvailableDays: number;
 }
 
 export interface EmployeeWithVacation extends Employee {
