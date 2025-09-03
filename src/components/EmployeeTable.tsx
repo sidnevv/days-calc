@@ -1,4 +1,4 @@
-import { EmployeeWithVacation } from '../types';
+import { EmployeeWithVacation } from '@/types';
 import { useState } from 'react';
 import {isPublicHoliday} from "@/lib/database";
 
@@ -10,6 +10,11 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
     const [selectedYear, setSelectedYear] = useState<number>(
         new Date().getFullYear()
     );
+    const [popover, setPopover] = useState<{
+        employeeId: number;
+        date: Date;
+        position: { x: number; y: number };
+    } | null>(null);
 
     // диапазон месяцев
     const [startMonth, setStartMonth] = useState(1); // Январь
@@ -23,6 +28,31 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
     const visibleMonths = yearMonths.filter(
         (m) => m.month >= startMonth && m.month <= endMonth
     );
+
+    const handleCellClick = (
+        employee: EmployeeWithVacation,
+        date: Date,
+        e: React.MouseEvent<HTMLTableCellElement>
+    ) => {
+        let available = employee.vacation.availableDays;
+        let additional = employee.vacation.availableAdditionalDays;
+
+        if (date.getFullYear() > new Date().getFullYear()) {
+            available += employee.vacationDaysPerYear;
+            additional += employee.positionChanges?.at(-1)?.additionalDaysPerYear ?? 0;
+        }
+
+        setPopover({
+            employeeId: employee.id,
+            date,
+            position: { x: e.clientX, y: e.clientY },
+        });
+
+        // можно хранить доступные дни прямо в состоянии, если не хочешь пересчитывать в рендере поповера
+    };
+
+
+
 
     if (employees.length === 0) {
         return (
@@ -196,25 +226,46 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                                         monthData.month - 1,
                                         dayNumber
                                     );
+
                                     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                                     const holiday = isPublicHoliday(date);
+
+                                    const hireDate = new Date(employee.hireDate);
+                                    const probationEnd = new Date(hireDate);
+                                    probationEnd.setMonth(probationEnd.getMonth() + 6);
+
+                                    const isBeforeHire = date < hireDate;
+                                    const isProbation = date >= hireDate && date < probationEnd;
 
                                     return (
                                         <td
                                             key={`${monthData.month}-day-${dayNumber}`}
                                             className={`text-center text-[11px] border border-gray-700 
-        w-8 h-6 min-w-[32px] cursor-pointer
-        ${
-                                                holiday
-                                                    ? 'bg-yellow-900/60 text-yellow-300'
-                                                    : isWeekend
-                                                        ? 'bg-red-900/60 text-red-400'
-                                                        : 'bg-gray-900 text-gray-400'
+                    w-8 h-6 min-w-[32px]
+                    ${
+                                                isBeforeHire || isProbation
+                                                    ? 'bg-gray-600/40 text-gray-500 cursor-not-allowed'
+                                                    : holiday
+                                                        ? 'bg-yellow-900/60 text-yellow-300'
+                                                        : isWeekend
+                                                            ? 'bg-red-900/60 text-red-400'
+                                                            : 'bg-gray-900 text-gray-400 hover:bg-blue-900'
                                             }
-        hover:bg-blue-900 transition-colors duration-100`}
+                    transition-colors duration-100`}
                                             title={`${dayNumber} ${monthData.monthName} ${selectedYear} ${
-                                                holiday ? '(Праздник)' : ''
+                                                isBeforeHire
+                                                    ? '(До приёма на работу)'
+                                                    : isProbation
+                                                        ? '(Испытательный срок)'
+                                                        : holiday
+                                                            ? '(Праздник)'
+                                                            : ''
                                             }`}
+                                            onClick={(e) => {
+                                                if (!isBeforeHire && !isProbation) {
+                                                    handleCellClick(employee, date, e);
+                                                }
+                                            }}
                                         ></td>
                                     );
                                 })
@@ -223,6 +274,42 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                     ))}
                     </tbody>
                 </table>
+
+                {popover && (
+                    <div
+                        className="absolute z-50 bg-gray-800 text-gray-200 text-xs px-3 py-2 rounded-lg shadow-lg border border-gray-600"
+                        style={{
+                            top: popover.position.y + 10,
+                            left: popover.position.x + 10,
+                        }}
+                        onClick={() => setPopover(null)} // клик по поповеру закроет его
+                    >
+                        {(() => {
+                            const employee = employees.find((e) => e.id === popover.employeeId);
+                            if (!employee) return null;
+
+                            let available = employee.vacation.availableDays;
+                            let additional = employee.vacation.availableAdditionalDays;
+
+                            if (popover.date.getFullYear() > new Date().getFullYear()) {
+                                available += employee.vacationDaysPerYear;
+                                additional += employee.positionChanges?.at(-1)?.additionalDaysPerYear ?? 0;
+                            }
+
+                            return (
+                                <div>
+                                    <div className="font-semibold mb-1">
+                                        {popover.date.toLocaleDateString('ru-RU')}
+                                    </div>
+                                    <div>
+                                        <span className="text-green-400">{available.toFixed(1)}</span> осн. +
+                                        <span className="text-blue-400"> {additional.toFixed(1)}</span> доп.
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
             </div>
 
             <div className="p-4 border-t border-gray-700 bg-gray-800 rounded-b-xl">
@@ -245,6 +332,11 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                     <div className="flex items-center space-x-2">
                         <div className="w-4 h-4 bg-gray-900 border border-gray-700 rounded-sm"></div>
                         <span>Рабочие дни</span>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-gray-600/40 border border-gray-700 rounded-sm"></div>
+                        <span>Заблокировано для выбора (отработал &lt; 6 мес.)</span>
                     </div>
 
                     <div className="flex items-center space-x-2">
