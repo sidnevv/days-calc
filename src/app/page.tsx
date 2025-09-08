@@ -5,7 +5,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { UserCard } from '@/components/UserCard';
 import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
 import { calculateVacationDaysSimple } from '@/lib/calculations';
-import { ErrorHandler } from '@/components/ErrorHandler';
+import { ErrorHandler } from '@/components/ui/ErrorHandler';
 import { Employee } from '@/types';
 import { useGetCurrentUserQuery } from '@/lib/api/authApi';
 
