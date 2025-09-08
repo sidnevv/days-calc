@@ -1,59 +1,48 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import EmployeeTable from '../components/EmployeeTable';
-import { EmployeeWithVacation } from '../types';
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from '@/components/ThemeToggle';
+import { UserCard } from '@/components/UserCard';
+import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
+import { calculateVacationDaysSimple } from '@/lib/calculations';
+import { ErrorHandler } from '@/components/ErrorHandler';
+import { Employee } from '@/types';
+import { useGetCurrentUserQuery } from '@/lib/api/authApi';
 
 export default function Home() {
-    const [employees, setEmployees] = useState<EmployeeWithVacation[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const { data, error, isLoading } = useGetEmployeesQuery();
+  const { data: user } = useGetCurrentUserQuery();
 
-    useEffect(() => {
-        fetchEmployees();
-    }, []);
+  const employees = data?.map((emp: Employee) => ({
+    ...emp,
+    vacation: calculateVacationDaysSimple(emp),
+  }));
 
-    const fetchEmployees = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const response = await fetch('/api/employees');
-
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить сотрудников');
-            }
-
-            const data = await response.json();
-            setEmployees(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Произошла ошибка');
-            console.error('Error fetching employees:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-                <div className="text-xl text-gray-300 animate-pulse">Загрузка...</div>
-            </div>
-        );
-    }
-
+  if (isLoading) {
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col p-3">
-            {error && (
-                <div className="bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded mb-6">
-                    {error}
-                </div>
-            )}
-            <div className="flex justify-end mb-4">
-                <ThemeToggle />
-            </div>
-
-                <EmployeeTable employees={employees} />
-        </div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-xl text-gray-300 animate-pulse">Loading...</div>
+      </div>
     );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col p-3">
+      <ErrorHandler error={error} />
+      <div className="flex justify-end mb-4  gap-2">
+        <ThemeToggle />
+        <UserCard user={user!} />
+      </div>
+
+      {employees && employees.length > 0 ? (
+        <EmployeeTable employees={employees} />
+      ) : (
+        !error && (
+          <div className="bg-gray-100 border border-gray-200 rounded-md p-4 text-center">
+            <p className="text-gray-600">Нет данных о сотрудниках</p>
+          </div>
+        )
+      )}
+    </div>
+  );
 }
