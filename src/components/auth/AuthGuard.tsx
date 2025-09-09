@@ -2,8 +2,8 @@
 
 import { ReactNode } from 'react';
 import { useGetCurrentUserQuery } from '@/lib/api/authApi';
-import AuthLoader from '@/components/ui/AuthLoader';
-import ErrorMessage from '@/components/ui/ErrorMessage';
+import AuthLoader from '@/components/auth/AuthLoader';
+import ErrorMessage from '@/components/common/ErrorMessage';
 
 interface AuthGuardProps {
   children: ReactNode;

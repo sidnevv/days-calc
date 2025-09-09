@@ -1,6 +1,6 @@
 import { EmployeeWithVacation } from '@/types';
 import React, { useState } from 'react';
-import { useHolidaysCheck } from '@/hooks/useHolidaysCheck';
+import { useHolidaysCheck } from '@/hooks';
 
 interface EmployeeTableProps {
   employees: EmployeeWithVacation[];
@@ -34,6 +34,7 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
     {},
   );
 
+  console.log(selectionStart, selectionEnd, selectedDatesByEmployee);
   const calculateAvailableDays = (employee: EmployeeWithVacation, date: Date) => {
     let available = employee.vacation.availableDays;
     let additional = employee.vacation.availableAdditionalDays;

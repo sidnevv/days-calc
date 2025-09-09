@@ -1,11 +1,11 @@
 'use client';
 
-import EmployeeTable from '../components/EmployeeTable';
-import ThemeToggle from '@/components/ThemeToggle';
-import { UserCard } from '@/components/UserCard';
+import EmployeeTable from '../components/employees/EmployeeTable';
+import ThemeToggle from '@/components/common/ThemeToggle';
+import { UserCard } from '@/components/layout/UserCard';
 import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
-import { calculateVacationDaysSimple } from '@/lib/calculations';
-import { ErrorHandler } from '@/components/ui/ErrorHandler';
+import { calculateVacationDaysSimple } from '@/lib/utils/calculations';
+import { ErrorHandler } from '@/components/common/ErrorHandler';
 import { Employee } from '@/types';
 import { useGetCurrentUserQuery } from '@/lib/api/authApi';
 
