@@ -1,5 +1,7 @@
 'use client';
+
 import React from 'react';
+
 import { User } from '@/types';
 
 export type UserCardProps = {
@@ -24,16 +26,14 @@ export function UserCard({ user, className }: UserCardProps) {
       className={clsx(
         'flex items-center gap-2 px-2 py-1.5 rounded-xl shadow-md border border-gray-700 bg-gray-800 hover:bg-gray-800/80 transition-all duration-300 hover:shadow-sm text-center text-gray-200 text-sm',
         className,
-      )}
-    >
+      )}>
       <div
         aria-hidden="true"
         className={clsx(
           'flex items-center justify-center w-8 h-8 rounded-lg font-medium select-none text-sm',
           'bg-neutral-200 text-neutral-800 dark:bg-gray-500 dark:text-neutral-100',
         )}
-        title={initials}
-      >
+        title={initials}>
         {initials}
       </div>
 

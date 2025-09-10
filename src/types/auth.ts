@@ -1,4 +1,5 @@
 export interface User {
+  id: number;
   samaccountname: string;
   email: string;
   title: string;

@@ -1,13 +1,14 @@
 'use client';
 
-import EmployeeTable from '../components/employees/EmployeeTable';
+import { ErrorHandler } from '@/components/common/ErrorHandler';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { UserCard } from '@/components/layout/UserCard';
+import { useGetCurrentUserQuery } from '@/lib/api/authApi';
 import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
 import { calculateVacationDaysSimple } from '@/lib/utils/calculations';
-import { ErrorHandler } from '@/components/common/ErrorHandler';
 import { Employee } from '@/types';
-import { useGetCurrentUserQuery } from '@/lib/api/authApi';
+
+import EmployeeTable from '../components/employees/EmployeeTable';
 
 export default function Home() {
   const { data, error, isLoading } = useGetEmployeesQuery();
@@ -35,7 +36,7 @@ export default function Home() {
       </div>
 
       {employees && employees.length > 0 ? (
-        <EmployeeTable employees={employees} />
+        <EmployeeTable employees={employees} currentUserId={user!.id} />
       ) : (
         !error && (
           <div className="bg-gray-100 border border-gray-200 rounded-md p-4 text-center">

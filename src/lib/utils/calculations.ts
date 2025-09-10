@@ -1,4 +1,5 @@
 import { Employee, PositionChange, VacationCalculation } from '@/types';
+
 import { getAdditionalDaysByPosition } from './common';
 
 export const calculateVacationDaysSimple = (employee: Employee): VacationCalculation => {

@@ -1,9 +1,15 @@
+import { SaveVacationRangesRequest } from '@/types/vacation';
+
 export interface PositionChange {
   fromDate: string;
   toDate: string | null;
   position: string;
   vacationDaysPerYear: number;
   additionalDaysPerYear: number;
+}
+
+export interface VacationRange extends SaveVacationRangesRequest {
+  duration: number;
 }
 export interface Employee {
   id: number;
@@ -14,6 +20,7 @@ export interface Employee {
   usedVacationDays: number;
   usedAdditionalDays: number;
   positionChanges: PositionChange[];
+  vacationRanges: VacationRange[];
 }
 
 export interface VacationCalculation {

@@ -33,8 +33,7 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ title, message, icon, actio
         {action && (
           <button
             onClick={action.onClick}
-            className={`${variantClasses[action.variant || 'primary']} text-white font-medium py-2 px-4 rounded-lg transition-colors`}
-          >
+            className={`${variantClasses[action.variant || 'primary']} text-white font-medium py-2 px-4 rounded-lg transition-colors`}>
             {action.label}
           </button>
         )}

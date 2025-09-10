@@ -1,5 +1,5 @@
-import { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { SerializedError } from '@reduxjs/toolkit';
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
 interface ErrorHandlerProps {
   error: FetchBaseQueryError | SerializedError | undefined;

@@ -1,9 +1,10 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { useGetCurrentUserQuery } from '@/lib/api/authApi';
+
 import AuthLoader from '@/components/auth/AuthLoader';
 import ErrorMessage from '@/components/common/ErrorMessage';
+import { useGetCurrentUserQuery } from '@/lib/api/authApi';
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -52,16 +53,14 @@ export default function AuthGuard({ children, requiredGroups }: AuthGuardProps) 
           label: 'На главную',
           onClick: () => (window.location.href = '/'),
           variant: 'secondary',
-        }}
-      >
+        }}>
         <div className="bg-gray-50 rounded-lg p-3 mb-4">
           <p className="text-sm text-gray-500">Требуемые группы:</p>
           <div className="flex flex-wrap gap-1 justify-center mt-1">
             {requiredGroups.map((group) => (
               <span
                 key={group}
-                className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
-              >
+                className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                 {group}
               </span>
             ))}

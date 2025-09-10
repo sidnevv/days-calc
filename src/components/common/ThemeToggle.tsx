@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
@@ -25,8 +25,7 @@ export default function ThemeToggle() {
     <button
       onClick={toggleTheme}
       className="px-2.5 py-1.5 cursor-pointer rounded-xl shadow-lg border border-gray-700  bg-gray-800 hover:bg-gray-800/80 transition-all duration-300 hover:shadow-md text-center"
-      title={isDark ? 'Переключить на светлую тему' : 'Переключить на темную тему'}
-    >
+      title={isDark ? 'Переключить на светлую тему' : 'Переключить на темную тему'}>
       {isDark ? (
         <span className="w-5 h-5 cursor-pointer text-2xl">☼</span>
       ) : (

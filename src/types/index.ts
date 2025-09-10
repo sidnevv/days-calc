@@ -5,3 +5,4 @@ export type {
   Employee,
   VacationCalculation,
 } from './employee';
+export type { SaveVacationRangesRequest, VacationRange, EmployeeSelection } from './vacation';
