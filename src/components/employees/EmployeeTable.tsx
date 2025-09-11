@@ -1143,6 +1143,11 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
             <span className="text-blue-400">(YYY)</span>
             <span>- дополнительные дни</span>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-yellow-300">ZZZ</span>
+            <span>- кол-во выбранных дней</span>
+          </div>
         </div>
       </div>
 
