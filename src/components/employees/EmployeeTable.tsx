@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Save, Trash } from 'lucide-react';
 
 import { useHolidaysCheck } from '@/hooks';
+import { useToaster } from '@/hooks/useToaster';
 import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
 import {
   useDeleteVacationRangesMutation,
@@ -250,38 +251,26 @@ const EmployeeRow = memo(
 
             const isSelected = selectedDates.some((d) => d.getTime() === date.getTime());
 
-            const isInCurrentSelection = useMemo(
-              () =>
-                selectionStart &&
-                selectionEnd &&
-                selectionStart.employeeId === employee.id &&
-                date >=
-                  new Date(Math.min(selectionStart.date.getTime(), selectionEnd.date.getTime())) &&
-                date <=
-                  new Date(Math.max(selectionStart.date.getTime(), selectionEnd.date.getTime())),
-              [selectionStart, selectionEnd, employee.id, date],
-            );
+            const isInCurrentSelection =
+              selectionStart &&
+              selectionEnd &&
+              selectionStart.employeeId === employee.id &&
+              date >=
+                new Date(Math.min(selectionStart.date.getTime(), selectionEnd.date.getTime())) &&
+              date <=
+                new Date(Math.max(selectionStart.date.getTime(), selectionEnd.date.getTime()));
 
-            const isInSavedRange = useMemo(
-              () =>
-                selection?.ranges.some((range) => {
-                  const rangeStart = new Date(range.startDate);
-                  const rangeEnd = new Date(range.endDate);
-                  return date >= rangeStart && date <= rangeEnd;
-                }),
-              [selection, date],
-            );
+            const isInSavedRange = selection?.ranges.some((range) => {
+              const rangeStart = new Date(range.startDate);
+              const rangeEnd = new Date(range.endDate);
+              return date >= rangeStart && date <= rangeEnd;
+            });
 
-            // Проверяем, находится ли дата в серверном диапазоне
-            const isInServerRange = useMemo(
-              () =>
-                serverRanges.some((range) => {
-                  const rangeStart = new Date(range.startDate);
-                  const rangeEnd = new Date(range.endDate);
-                  return date >= rangeStart && date <= rangeEnd;
-                }),
-              [serverRanges, date],
-            );
+            const isInServerRange = serverRanges.some((range) => {
+              const rangeStart = new Date(range.startDate);
+              const rangeEnd = new Date(range.endDate);
+              return date >= rangeStart && date <= rangeEnd;
+            });
 
             return (
               <CalendarCell
@@ -344,7 +333,7 @@ const DeleteRangesModal = memo(
   }: DeleteRangesModalProps) => {
     if (!deleteModalOpen) return null;
 
-    const handleDelete = useCallback(() => {
+    const handleDelete = () => {
       const serverCheckboxes = document.querySelectorAll<HTMLInputElement>(
         'input[type="checkbox"][id^="server-range-"]:checked',
       );
@@ -372,7 +361,7 @@ const DeleteRangesModal = memo(
       if (selectedLocalRangeIds.length > 0) {
         onDelete(selectedLocalRangeIds, false);
       }
-    }, [onDelete, serverRanges]);
+    };
 
     return (
       <div
@@ -488,6 +477,7 @@ const DeleteRangesModal = memo(
 DeleteRangesModal.displayName = 'DeleteRangesModal';
 
 export default function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) {
+  const toast = useToaster();
   const { isPublicHoliday, isLoading } = useHolidaysCheck();
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [popover, setPopover] = useState<{
@@ -514,6 +504,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
   );
 
   const yearMonths = useMemo(() => getMonthsWithDays(selectedYear), [selectedYear]);
+
   const visibleMonths = useMemo(
     () => yearMonths.filter((m) => m.month >= startMonth && m.month <= endMonth),
     [yearMonths, startMonth, endMonth],
@@ -750,7 +741,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
     async (employeeId: number) => {
       const selection = selectionsByEmployee[employeeId];
       if (!selection || selection.ranges.length === 0) {
-        console.log('Нет диапазонов для сохранения');
+        toast.error('Нет диапазонов для сохранения');
         return;
       }
 
@@ -767,7 +758,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
 
         await saveVacationRanges(request).unwrap();
         refetchEmployees();
-        console.log(`Диапазоны для сотрудника ${employeeId} успешно сохранены`);
+        toast.success(`Выбранные диапазоны успешно сохранены`);
 
         // После сохранения очищаем локальные диапазоны
         setSelectionsByEmployee((prev) => ({
@@ -778,10 +769,10 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
           },
         }));
       } catch (error) {
-        console.error('Ошибка при сохранении диапазонов:', error);
+        toast.error(`Ошибка при сохранении диапазонов`);
       }
     },
-    [selectionsByEmployee, selectedYear, saveVacationRanges],
+    [selectionsByEmployee, selectedYear, saveVacationRanges, refetchEmployees, toast],
   );
 
   const openDeleteModal = useCallback(() => {
@@ -807,12 +798,12 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
             ranges: rangesForApi,
           }).unwrap();
 
-          console.log('Серверные диапазоны успешно удалены');
+          toast.success('Серверные диапазоны успешно удалены');
 
           // Обновляем UI - перезагружаем данные или обновляем состояние
           // В реальном приложении здесь нужно обновить данные сотрудника
         } catch (error) {
-          console.error('Ошибка при удалении серверных диапазонов:', error);
+          toast.error('Ошибка при удалении серверных диапазонов');
         }
       } else {
         // Удаление локальных диапазонов
@@ -870,11 +861,11 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
 
   useEffect(() => {
     if (isSuccess) {
-      console.log('Диапазоны отпусков успешно сохранены');
+      toast.success('Диапазоны отпусков успешно сохранены');
     }
 
     if (isError) {
-      console.error('Ошибка при сохранении диапазонов отпусков');
+      toast.error('Ошибка при сохранении диапазонов отпусков');
     }
   }, [isSuccess, isError]);
 
@@ -916,7 +907,8 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
                 }
                 setStartMonth(newStart);
               }}
-              className="border border-gray-600 rounded-md px-2 py-1 text-xs text-gray-100 bg-gray-700">
+              className="border border-gray-600 rounded-md px-3 py-1 text-xs text-gray-100 bg-gray-700
+               focus:outline-none focus:ring-2 focus:ring-blue-500">
               {yearMonths.map((m) => (
                 <option key={m.month} value={m.month}>
                   {m.monthName}
@@ -933,7 +925,8 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
                 }
                 setEndMonth(newEnd);
               }}
-              className="border border-gray-600 rounded-md px-2 py-1 text-xs text-gray-100 bg-gray-700">
+              className="border border-gray-600 rounded-md px-3 py-1 text-xs text-gray-100 bg-gray-700
+               focus:outline-none focus:ring-2 focus:ring-blue-500">
               {yearMonths.map((m) => (
                 <option key={m.month} value={m.month}>
                   {m.monthName}
@@ -941,18 +934,20 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
               ))}
             </select>
           </div>
-          <button
-            className="cursor-pointer border border-gray-600 rounded-md px-2 py-1 text-xs text-gray-100 bg-gray-700 hover:bg-green-600"
-            title="Сохранить"
-            onClick={() => saveRangesToServer(currentUserId)}>
-            <Save color="#ffffff" size={18} />
-          </button>
-          <button
-            className="cursor-pointer border border-gray-600 rounded-md px-2 py-1 text-xs text-gray-100 bg-gray-700 hover:bg-rose-600"
-            title="Очистить выбранные диапозоны"
-            onClick={openDeleteModal}>
-            <Trash color="#ffffff" size={18} />
-          </button>
+          <div className="inline-flex rounded-md shadow-xs" role="group">
+            <button
+              className="cursor-pointer rounded-l-md border border-gray-600 transition-colors  px-3 py-1 text-xs text-gray-100 bg-gray-700 hover:bg-green-600"
+              title="Сохранить"
+              onClick={() => saveRangesToServer(currentUserId)}>
+              <Save color="#ffffff" size={18} />
+            </button>
+            <button
+              className="cursor-pointer rounded-r-md border border-gray-600 transition-colors  px-3 py-1 text-xs text-gray-100 bg-gray-700 hover:bg-rose-600"
+              title="Очистить выбранные диапозоны"
+              onClick={openDeleteModal}>
+              <Trash color="#ffffff" size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col items-end text-xs space-y-1">
