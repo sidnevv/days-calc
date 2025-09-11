@@ -8,6 +8,9 @@ export const employeeApi = apiSlice.injectEndpoints({
     getEmployees: builder.query<Employee[], void>({
       query: () => '/employees',
     }),
+    getAllEmployees: builder.query<Employee[], void>({
+      query: () => '/employees/all',
+    }),
     // getEmployee: builder.query<Employee, number>({
     //   query: (id) => `/employee/${id}`,
     // }),
@@ -36,6 +39,7 @@ export const employeeApi = apiSlice.injectEndpoints({
 
 export const {
   useGetEmployeesQuery,
+  useGetAllEmployeesQuery,
   // useGetEmployeeQuery,
   // useAddEmployeeMutation,
   // useUpdateEmployeeMutation,
