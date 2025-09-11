@@ -1,18 +1,23 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+
+import { Menu, Settings, User } from 'lucide-react';
+
 import { ErrorHandler } from '@/components/common/ErrorHandler';
-import ThemeToggle from '@/components/common/ThemeToggle';
 import { UserCard } from '@/components/layout/UserCard';
 import { useGetCurrentUserQuery } from '@/lib/api/authApi';
 import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
 import { calculateVacationDaysSimple } from '@/lib/utils/calculations';
 import { Employee } from '@/types';
+import { DropdownButton, DropdownItem } from '@/ui/DropdownButton';
 
 import EmployeeTable from '../components/employees/EmployeeTable';
 
 export default function Home() {
-  const { data, error, isLoading, refetch } = useGetEmployeesQuery();
+  const { data, error, isLoading } = useGetEmployeesQuery();
   const { data: user } = useGetCurrentUserQuery();
+  const router = useRouter();
 
   const employees = data?.map((emp: Employee) => ({
     ...emp,
@@ -27,12 +32,33 @@ export default function Home() {
     );
   }
 
+  const menuItems: DropdownItem[] = [
+    {
+      id: 'profile',
+      label: 'Сотрудники',
+      icon: <User size={16} />,
+      onClick: () => router.push('/employees'),
+    },
+    { id: 'divider-1', divider: true },
+    {
+      id: 'settings',
+      label: 'Настройки',
+      icon: <Settings size={16} />,
+      onClick: () => console.log('Настройки'),
+      disabled: true,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col p-3">
       <ErrorHandler error={error} />
-      <div className="flex justify-end mb-4  gap-2">
-        <ThemeToggle />
-        <UserCard user={user!} />
+      <div className="flex item-center justify-between mb-4 gap-2">
+        <div>
+          <DropdownButton label={<Menu size={20} />} items={menuItems} />
+        </div>
+        <div className="flex justify-end">
+          <UserCard user={user!} />
+        </div>
       </div>
 
       {employees && employees.length > 0 ? (
