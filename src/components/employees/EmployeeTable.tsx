@@ -3,7 +3,11 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Save, Trash } from 'lucide-react';
 
 import { useHolidaysCheck } from '@/hooks';
-import { useSaveVacationRangesMutation } from '@/lib/api/vacationsApi';
+import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
+import {
+  useDeleteVacationRangesMutation,
+  useSaveVacationRangesMutation,
+} from '@/lib/api/vacationsApi';
 import {
   EmployeeSelection,
   EmployeeWithVacation,
@@ -49,6 +53,7 @@ interface CalendarCellProps {
   isSelected: boolean;
   isInCurrentSelection: boolean;
   isInSavedRange: boolean;
+  isInServerRange: boolean;
   isCurrentUser: boolean;
   onMouseDown: (e: React.MouseEvent<HTMLTableCellElement>) => void;
   onMouseEnter: (e: React.MouseEvent<HTMLTableCellElement>) => void;
@@ -64,6 +69,7 @@ const CalendarCell = memo(
     isSelected,
     isInCurrentSelection,
     isInSavedRange,
+    isInServerRange,
     isCurrentUser,
     onMouseDown,
     onMouseEnter,
@@ -91,24 +97,27 @@ const CalendarCell = memo(
     ${
       !isCurrentUser
         ? 'cursor-not-allowed bg-gray-800/50 text-gray-500'
-        : isSelected
-          ? 'bg-green-500/70 text-white'
-          : isInCurrentSelection
-            ? 'bg-green-300/50 text-white'
-            : isInSavedRange
-              ? 'bg-blue-500/60 text-white'
-              : isBeforeHire || isProbation
-                ? 'bg-gray-600/40 text-gray-500 cursor-not-allowed'
-                : holiday
-                  ? 'bg-yellow-900/60 text-yellow-300'
-                  : isWeekend
-                    ? 'bg-red-900/60 text-red-400'
-                    : 'bg-gray-900 text-gray-400 hover:bg-blue-900'
+        : isInServerRange
+          ? 'cursor-not-allowed bg-purple-600/40 text-gray-300'
+          : isSelected
+            ? 'bg-green-500/70 text-white'
+            : isInCurrentSelection
+              ? 'bg-green-300/50 text-white'
+              : isInSavedRange
+                ? 'bg-blue-500/60 text-white'
+                : isBeforeHire || isProbation
+                  ? 'bg-gray-600/40 text-gray-500 cursor-not-allowed'
+                  : holiday
+                    ? 'bg-yellow-900/60 text-yellow-300'
+                    : isWeekend
+                      ? 'bg-red-900/60 text-red-400'
+                      : 'bg-gray-900 text-gray-400 hover:bg-blue-900'
     }
     transition-colors duration-100
   `,
       [
         isCurrentUser,
+        isInServerRange,
         isSelected,
         isInCurrentSelection,
         isInSavedRange,
@@ -123,16 +132,27 @@ const CalendarCell = memo(
       () =>
         !isCurrentUser
           ? 'Можно редактировать только свои диапазоны'
-          : `${dayNumber} ${monthData.monthName} ${date.getFullYear()} ${
-              isBeforeHire
-                ? '(До приёма на работу)'
-                : isProbation
-                  ? '(Испытательный срок)'
-                  : holiday
-                    ? '(Праздник)'
-                    : ''
-            }`,
-      [isCurrentUser, dayNumber, monthData.monthName, date, isBeforeHire, isProbation, holiday],
+          : isInServerRange
+            ? 'Уже сохраненный диапазон (нельзя изменить)'
+            : `${dayNumber} ${monthData.monthName} ${date.getFullYear()} ${
+                isBeforeHire
+                  ? '(До приёма на работу)'
+                  : isProbation
+                    ? '(Испытательный срок)'
+                    : holiday
+                      ? '(Праздник)'
+                      : ''
+              }`,
+      [
+        isCurrentUser,
+        isInServerRange,
+        dayNumber,
+        monthData.monthName,
+        date,
+        isBeforeHire,
+        isProbation,
+        holiday,
+      ],
     );
 
     return (
@@ -199,6 +219,12 @@ const EmployeeRow = memo(
 
     const totalAvailable = available + additional;
 
+    // Получаем серверные диапазоны (изначально сохраненные)
+    const serverRanges = useMemo(() => {
+      const yearRanges = employee.vacationRanges.find((range) => range.year === selectedYear);
+      return yearRanges?.ranges || [];
+    }, [employee.vacationRanges, selectedYear]);
+
     return (
       <tr className="hover:bg-gray-800 transition-colors duration-150">
         <td className="sticky left-0 z-10 px-3 py-2 whitespace-nowrap text-xs uppercase font-normal text-gray-100 bg-gray-900 border-r border-gray-700">
@@ -238,15 +264,23 @@ const EmployeeRow = memo(
 
             const isInSavedRange = useMemo(
               () =>
-                employee.vacationRanges.some((vacationRange) => {
-                  if (vacationRange.year !== selectedYear) return false;
-                  return vacationRange.ranges.some((range) => {
-                    const rangeStart = new Date(range.startDate);
-                    const rangeEnd = new Date(range.endDate);
-                    return date >= rangeStart && date <= rangeEnd;
-                  });
+                selection?.ranges.some((range) => {
+                  const rangeStart = new Date(range.startDate);
+                  const rangeEnd = new Date(range.endDate);
+                  return date >= rangeStart && date <= rangeEnd;
                 }),
-              [employee.vacationRanges, selectedYear, date],
+              [selection, date],
+            );
+
+            // Проверяем, находится ли дата в серверном диапазоне
+            const isInServerRange = useMemo(
+              () =>
+                serverRanges.some((range) => {
+                  const rangeStart = new Date(range.startDate);
+                  const rangeEnd = new Date(range.endDate);
+                  return date >= rangeStart && date <= rangeEnd;
+                }),
+              [serverRanges, date],
             );
 
             return (
@@ -259,6 +293,7 @@ const EmployeeRow = memo(
                 isSelected={isSelected}
                 isInCurrentSelection={!!isInCurrentSelection}
                 isInSavedRange={isInSavedRange}
+                isInServerRange={isInServerRange}
                 isCurrentUser={isCurrentUser}
                 onMouseDown={(e) => handleMouseDown(employee, date, e)}
                 onMouseEnter={(e) => handleMouseEnter(employee, date, e)}
@@ -274,27 +309,70 @@ const EmployeeRow = memo(
 
 EmployeeRow.displayName = 'EmployeeRow';
 
+// Интерфейс для серверного диапазона
+interface ServerRange {
+  startDate: string;
+  endDate: string;
+}
+
+// Интерфейс для серверного vacationRange
+interface ServerVacationRange {
+  id: number;
+  employeeId: number;
+  year: number;
+  status: string;
+  ranges: ServerRange[];
+  duration: number;
+}
+
 // Мемоизированный компонент модального окна удаления
 interface DeleteRangesModalProps {
   deleteModalOpen: boolean;
   rangesToDelete: VacationRange[];
+  serverRanges: ServerRange[];
   onClose: () => void;
-  onDelete: (rangeIds: number[]) => void;
+  onDelete: (rangeIds: number[], isServerRange: boolean, ranges?: ServerRange[]) => void;
 }
 
 const DeleteRangesModal = memo(
-  ({ deleteModalOpen, rangesToDelete, onClose, onDelete }: DeleteRangesModalProps) => {
+  ({
+    deleteModalOpen,
+    rangesToDelete,
+    serverRanges,
+    onClose,
+    onDelete,
+  }: DeleteRangesModalProps) => {
     if (!deleteModalOpen) return null;
 
     const handleDelete = useCallback(() => {
-      const checkboxes = document.querySelectorAll<HTMLInputElement>(
-        'input[type="checkbox"]:checked',
+      const serverCheckboxes = document.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"][id^="server-range-"]:checked',
       );
-      const selectedRangeIds = Array.from(checkboxes).map((cb) =>
-        parseInt(cb.id.replace('range-', '')),
+      const localCheckboxes = document.querySelectorAll<HTMLInputElement>(
+        'input[type="checkbox"][id^="local-range-"]:checked',
       );
-      onDelete(selectedRangeIds);
-    }, [onDelete]);
+
+      // Для серверных диапазонов используем индексы, так как у них нет ID на клиенте
+      const selectedServerRanges = Array.from(serverCheckboxes).map((cb) => {
+        const index = parseInt(cb.id.replace('server-range-', ''));
+        return index;
+      });
+
+      const selectedLocalRangeIds = Array.from(localCheckboxes).map((cb) =>
+        parseInt(cb.id.replace('local-range-', '')),
+      );
+
+      // Получаем выбранные серверные диапазоны по индексам
+      const selectedServerRangeObjects = selectedServerRanges.map((index) => serverRanges[index]);
+
+      // Вызываем обработчики для каждого типа
+      if (selectedServerRanges.length > 0) {
+        onDelete(selectedServerRanges, true, selectedServerRangeObjects);
+      }
+      if (selectedLocalRangeIds.length > 0) {
+        onDelete(selectedLocalRangeIds, false);
+      }
+    }, [onDelete, serverRanges]);
 
     return (
       <div
@@ -307,34 +385,80 @@ const DeleteRangesModal = memo(
             Удаление диапазонов
           </h3>
 
-          {rangesToDelete.length === 0 ? (
-            <p className="text-gray-400 text-sm mb-6">Нет выбранных диапазонов для удаления</p>
+          {serverRanges.length === 0 && rangesToDelete.length === 0 ? (
+            <p className="text-gray-400 text-sm mb-6">Нет диапазонов для удаления</p>
           ) : (
             <>
               <p className="text-gray-400 text-sm mb-4">Выберите диапазоны для удаления:</p>
               <div className="max-h-60 overflow-y-auto space-y-2 mb-6 pr-1">
-                {rangesToDelete.map((range) => (
-                  <label
-                    key={range.id}
-                    htmlFor={`range-${range.id}`}
-                    className="flex items-center justify-between px-3 py-2
-                       bg-gray-700/50 hover:bg-gray-700 rounded-lg cursor-pointer
-                       transition-colors">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`range-${range.id}`}
-                        defaultChecked
-                        className="accent-red-500 w-4 h-4 rounded"
-                      />
-                      <span className="text-sm text-gray-200">
-                        {range.startDate.toLocaleDateString('ru-RU')} –{' '}
-                        {range.endDate.toLocaleDateString('ru-RU')}
-                        <span className="text-gray-500 ml-2">({range.daysCount} дней)</span>
-                      </span>
-                    </div>
-                  </label>
-                ))}
+                {/* Серверные диапазоны */}
+                {serverRanges.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-500 font-semibold mb-1">
+                      Сохраненные диапазоны:
+                    </p>
+                    {serverRanges.map((range, index) => {
+                      const startDate = new Date(range.startDate);
+                      const endDate = new Date(range.endDate);
+                      const daysCount =
+                        Math.ceil(
+                          (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+                        ) + 1;
+
+                      return (
+                        <label
+                          key={`server-${index}`}
+                          htmlFor={`server-range-${index}`}
+                          className="flex items-center justify-between px-3 py-2
+                             bg-purple-700/30 hover:bg-purple-700/50 rounded-lg cursor-pointer
+                             transition-colors border-l-2 border-purple-500">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`server-range-${index}`}
+                              className="accent-red-500 w-4 h-4 rounded"
+                            />
+                            <span className="text-sm text-gray-200">
+                              {startDate.toLocaleDateString('ru-RU')} –{' '}
+                              {endDate.toLocaleDateString('ru-RU')}
+                              <span className="text-gray-500 ml-2">({daysCount} дней)</span>
+                              <span className="text-purple-400 text-xs ml-2">(сохранено)</span>
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Локальные диапазоны */}
+                {rangesToDelete.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 font-semibold mb-1">Новые диапазоны:</p>
+                    {rangesToDelete.map((range) => (
+                      <label
+                        key={range.id}
+                        htmlFor={`local-range-${range.id}`}
+                        className="flex items-center justify-between px-3 py-2
+                           bg-gray-700/50 hover:bg-gray-700 rounded-lg cursor-pointer
+                           transition-colors">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`local-range-${range.id}`}
+                            defaultChecked
+                            className="accent-red-500 w-4 h-4 rounded"
+                          />
+                          <span className="text-sm text-gray-200">
+                            {range.startDate.toLocaleDateString('ru-RU')} –{' '}
+                            {range.endDate.toLocaleDateString('ru-RU')}
+                            <span className="text-gray-500 ml-2">({range.daysCount} дней)</span>
+                          </span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -346,7 +470,7 @@ const DeleteRangesModal = memo(
                  hover:bg-gray-600 transition-colors">
               Отмена
             </button>
-            {rangesToDelete.length > 0 && (
+            {(serverRanges.length > 0 || rangesToDelete.length > 0) && (
               <button
                 onClick={handleDelete}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg
@@ -372,8 +496,12 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
     position: { x: number; y: number };
   } | null>(null);
 
+  const { refetch: refetchEmployees } = useGetEmployeesQuery();
+
   const [saveVacationRanges, { isLoading: isSaving, isError, isSuccess }] =
     useSaveVacationRangesMutation();
+
+  const [deleteVacationRanges] = useDeleteVacationRangesMutation();
 
   const [startMonth, setStartMonth] = useState(1);
   const [endMonth, setEndMonth] = useState(12);
@@ -405,6 +533,15 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [rangesToDelete, setRangesToDelete] = useState<VacationRange[]>([]);
+
+  // Получаем серверные диапазоны для текущего пользователя
+  const serverRanges = useMemo(() => {
+    const currentEmployee = employees.find((e) => e.id === currentUserId);
+    if (!currentEmployee) return [];
+
+    const yearRanges = currentEmployee.vacationRanges.find((range) => range.year === selectedYear);
+    return yearRanges?.ranges || [];
+  }, [employees, currentUserId, selectedYear]);
 
   // Мемоизированные функции
   const getDatesInRange = useCallback((startDate: Date, endDate: Date): Date[] => {
@@ -445,16 +582,26 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
     [selectionsByEmployee],
   );
 
-  const isDateSelectable = useCallback((employee: EmployeeWithVacation, date: Date) => {
-    const hireDate = new Date(employee.hireDate);
-    const probationEnd = new Date(hireDate);
-    probationEnd.setMonth(probationEnd.getMonth() + 6);
+  const isDateSelectable = useCallback(
+    (employee: EmployeeWithVacation, date: Date) => {
+      const hireDate = new Date(employee.hireDate);
+      const probationEnd = new Date(hireDate);
+      probationEnd.setMonth(probationEnd.getMonth() + 6);
 
-    const isBeforeHire = date < hireDate;
-    const isProbation = date >= hireDate && date < probationEnd;
+      const isBeforeHire = date < hireDate;
+      const isProbation = date >= hireDate && date < probationEnd;
 
-    return !isBeforeHire && !isProbation;
-  }, []);
+      // Проверяем, не находится ли дата в серверном диапазоне
+      const isInServerRange = serverRanges.some((range) => {
+        const rangeStart = new Date(range.startDate);
+        const rangeEnd = new Date(range.endDate);
+        return date >= rangeStart && date <= rangeEnd;
+      });
+
+      return !isBeforeHire && !isProbation && !isInServerRange;
+    },
+    [serverRanges],
+  );
 
   // Мемоизированные обработчики событий
   const handleMouseDown = useCallback(
@@ -619,12 +766,15 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
         };
 
         await saveVacationRanges(request).unwrap();
+        refetchEmployees();
         console.log(`Диапазоны для сотрудника ${employeeId} успешно сохранены`);
 
+        // После сохранения очищаем локальные диапазоны
         setSelectionsByEmployee((prev) => ({
           ...prev,
           [employeeId]: {
-            ...prev[employeeId],
+            ranges: [],
+            selectedDates: [],
           },
         }));
       } catch (error) {
@@ -641,72 +791,76 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
   }, [selectionsByEmployee, currentUserId]);
 
   const handleDeleteRanges = useCallback(
-    (rangeIds: number[]) => {
-      setSelectionsByEmployee((prev) => {
-        const currentSelection = prev[currentUserId];
-        if (!currentSelection) return prev;
+    async (rangeIds: number[], isServerRange: boolean, serverRangesToDelete?: ServerRange[]) => {
+      if (isServerRange && serverRangesToDelete) {
+        // Удаление серверных диапазонов
+        try {
+          // Преобразуем диапазоны в формат для API
+          const rangesForApi = serverRangesToDelete.map((range) => ({
+            startDate: range.startDate,
+            endDate: range.endDate,
+          }));
 
-        const rangesToRemove = currentSelection.ranges.filter((r) => rangeIds.includes(r.id));
+          await deleteVacationRanges({
+            employeeId: currentUserId,
+            year: selectedYear,
+            ranges: rangesForApi,
+          }).unwrap();
 
-        let updatedDates = [...currentSelection.selectedDates];
-        rangesToRemove.forEach((range) => {
-          const rangeDates = getDatesInRange(range.startDate, range.endDate);
-          updatedDates = updatedDates.filter(
-            (d) => !rangeDates.some((rd) => rd.getTime() === d.getTime()),
-          );
+          console.log('Серверные диапазоны успешно удалены');
+
+          // Обновляем UI - перезагружаем данные или обновляем состояние
+          // В реальном приложении здесь нужно обновить данные сотрудника
+        } catch (error) {
+          console.error('Ошибка при удалении серверных диапазонов:', error);
+        }
+      } else {
+        // Удаление локальных диапазонов
+        setSelectionsByEmployee((prev) => {
+          const currentSelection = prev[currentUserId];
+          if (!currentSelection) return prev;
+
+          const rangesToRemove = currentSelection.ranges.filter((r) => rangeIds.includes(r.id));
+
+          let updatedDates = [...currentSelection.selectedDates];
+          rangesToRemove.forEach((range) => {
+            const rangeDates = getDatesInRange(range.startDate, range.endDate);
+            updatedDates = updatedDates.filter(
+              (d) => !rangeDates.some((rd) => rd.getTime() === d.getTime()),
+            );
+          });
+
+          const updatedRanges = currentSelection.ranges.filter((r) => !rangeIds.includes(r.id));
+
+          return {
+            ...prev,
+            [currentUserId]: {
+              ranges: updatedRanges,
+              selectedDates: updatedDates,
+            },
+          };
         });
-
-        const updatedRanges = currentSelection.ranges.filter((r) => !rangeIds.includes(r.id));
-
-        return {
-          ...prev,
-          [currentUserId]: {
-            ranges: updatedRanges,
-            selectedDates: updatedDates,
-          },
-        };
-      });
+      }
 
       setDeleteModalOpen(false);
     },
-    [currentUserId, getDatesInRange],
+    [currentUserId, selectedYear, getDatesInRange, deleteVacationRanges],
   );
 
   useEffect(() => {
     const initialSelections: Record<number, EmployeeSelection> = {};
 
     employees.forEach((employee) => {
-      const yearRanges = employee.vacationRanges.find((range) => range.year === selectedYear);
-
-      if (yearRanges && yearRanges.ranges.length > 0) {
-        const ranges: VacationRange[] = [];
-        const selectedDates: Date[] = [];
-
-        yearRanges.ranges.forEach((range) => {
-          const startDate = new Date(range.startDate);
-          const endDate = new Date(range.endDate);
-          const datesInRange = getDatesInRange(startDate, endDate);
-
-          const vacationRange: VacationRange = {
-            id: nextRangeId.current++,
-            startDate,
-            endDate,
-            daysCount: datesInRange.length,
-          };
-
-          ranges.push(vacationRange);
-          selectedDates.push(...datesInRange);
-        });
-
-        initialSelections[employee.id] = {
-          ranges,
-          selectedDates,
-        };
-      }
+      // Инициализируем только пустые selections для каждого сотрудника
+      // Серверные диапазоны теперь обрабатываются отдельно
+      initialSelections[employee.id] = {
+        ranges: [],
+        selectedDates: [],
+      };
     });
 
     setSelectionsByEmployee(initialSelections);
-  }, [employees, selectedYear, getDatesInRange]);
+  }, [employees, selectedYear]);
 
   useEffect(() => {
     setSelectionsByEmployee({});
@@ -970,9 +1124,14 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
             <span>Выбранные дни отпуска</span>
           </div>
 
+          {/*<div className="flex items-center space-x-2">*/}
+          {/*    <div className="w-4 h-4 bg-blue-500/60 border border-blue-700 rounded-sm"></div>*/}
+          {/*    <span>Сохраненные диапазоны отпусков</span>*/}
+          {/*</div>*/}
+
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500/60 border border-blue-700 rounded-sm"></div>
-            <span>Сохраненные диапазоны отпусков</span>
+            <div className="w-4 h-4 bg-purple-600/40 border border-purple-700 rounded-sm"></div>
+            <span>Сохраненные диапазоны отпусков (нельзя изменить)</span>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -995,6 +1154,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
       <DeleteRangesModal
         deleteModalOpen={deleteModalOpen}
         rangesToDelete={rangesToDelete}
+        serverRanges={serverRanges}
         onClose={() => setDeleteModalOpen(false)}
         onDelete={handleDeleteRanges}
       />

@@ -11,7 +11,7 @@ import { Employee } from '@/types';
 import EmployeeTable from '../components/employees/EmployeeTable';
 
 export default function Home() {
-  const { data, error, isLoading } = useGetEmployeesQuery();
+  const { data, error, isLoading, refetch } = useGetEmployeesQuery();
   const { data: user } = useGetCurrentUserQuery();
 
   const employees = data?.map((emp: Employee) => ({
