@@ -4,9 +4,9 @@ import { Save, Trash } from 'lucide-react';
 
 import { useHolidaysCheck } from '@/hooks';
 import { useToaster } from '@/hooks/useToaster';
-import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
 import {
   useDeleteVacationRangesMutation,
+  useGetVacationEmployeesQuery,
   useSaveVacationRangesMutation,
 } from '@/lib/api/vacationsApi';
 import {
@@ -17,7 +17,7 @@ import {
 } from '@/types';
 
 interface EmployeeTableProps {
-  employees: EmployeeWithVacation[];
+  vacations: EmployeeWithVacation[];
   currentUserId: number;
 }
 
@@ -365,14 +365,14 @@ const DeleteRangesModal = memo(
 
     return (
       <div
-        className="fixed inset-0 flex items-center justify-center z-50 bg-black/70 backdrop-blur-sm
+        className="fixed inset-0 flex items-center justify-center z-50 bg-gray-900/70 backdrop-blur-sm
            transition-opacity data-[state=open]:opacity-100 data-[state=closed]:opacity-0">
         <div
           className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-4
              transform transition-all duration-300 scale-95 data-[state=open]:scale-100">
-          <h3 className="text-md font-semibold text-white mb-4 flex items-center">
+          <h2 className="text-md font-semibold text-white mb-4 flex items-center">
             Удаление диапазонов
-          </h3>
+          </h2>
 
           {serverRanges.length === 0 && rangesToDelete.length === 0 ? (
             <p className="text-gray-400 text-sm mb-6">Нет диапазонов для удаления</p>
@@ -476,7 +476,7 @@ const DeleteRangesModal = memo(
 
 DeleteRangesModal.displayName = 'DeleteRangesModal';
 
-export default function EmployeeTable({ employees, currentUserId }: EmployeeTableProps) {
+export default function VacationsTable({ vacations, currentUserId }: EmployeeTableProps) {
   const toast = useToaster();
   const { isPublicHoliday, isLoading } = useHolidaysCheck();
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -486,7 +486,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
     position: { x: number; y: number };
   } | null>(null);
 
-  const { refetch: refetchEmployees } = useGetEmployeesQuery();
+  const { refetch: refetchVacationEmployees } = useGetVacationEmployeesQuery();
 
   const [saveVacationRanges, { isLoading: isSaving, isError, isSuccess }] =
     useSaveVacationRangesMutation();
@@ -527,12 +527,12 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
 
   // Получаем серверные диапазоны для текущего пользователя
   const serverRanges = useMemo(() => {
-    const currentEmployee = employees.find((e) => e.id === currentUserId);
+    const currentEmployee = vacations.find((e) => e.id === currentUserId);
     if (!currentEmployee) return [];
 
     const yearRanges = currentEmployee.vacationRanges.find((range) => range.year === selectedYear);
     return yearRanges?.ranges || [];
-  }, [employees, currentUserId, selectedYear]);
+  }, [vacations, currentUserId, selectedYear]);
 
   // Мемоизированные функции
   const getDatesInRange = useCallback((startDate: Date, endDate: Date): Date[] => {
@@ -712,13 +712,15 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
           };
         }
       } else {
-        const newRange: VacationRange = {
+        //TODO: разобраться с типом VacationRange
+        const newRange = {
           id: nextRangeId.current++,
           startDate: start,
           endDate: end,
           daysCount: rangeDates.length,
         };
 
+        // @ts-ignore
         updatedRanges = [...updatedRanges, newRange];
         updatedDates = [...updatedDates, ...rangeDates];
       }
@@ -757,7 +759,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
         };
 
         await saveVacationRanges(request).unwrap();
-        refetchEmployees();
+        refetchVacationEmployees();
         toast.success(`Выбранные диапазоны успешно сохранены`);
 
         // После сохранения очищаем локальные диапазоны
@@ -772,7 +774,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
         toast.error(`Ошибка при сохранении диапазонов`);
       }
     },
-    [selectionsByEmployee, selectedYear, saveVacationRanges, refetchEmployees, toast],
+    [selectionsByEmployee, selectedYear, saveVacationRanges, refetchVacationEmployees, toast],
   );
 
   const openDeleteModal = useCallback(() => {
@@ -841,7 +843,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
   useEffect(() => {
     const initialSelections: Record<number, EmployeeSelection> = {};
 
-    employees.forEach((employee) => {
+    vacations.forEach((employee) => {
       // Инициализируем только пустые selections для каждого сотрудника
       // Серверные диапазоны теперь обрабатываются отдельно
       initialSelections[employee.id] = {
@@ -851,7 +853,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
     });
 
     setSelectionsByEmployee(initialSelections);
-  }, [employees, selectedYear]);
+  }, [vacations, selectedYear]);
 
   useEffect(() => {
     setSelectionsByEmployee({});
@@ -869,7 +871,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
     }
   }, [isSuccess, isError]);
 
-  if (employees.length === 0) {
+  if (vacations.length === 0) {
     return (
       <div className="bg-gray-800 rounded-xl shadow-md p-8 text-center">
         <p className="text-gray-400">Нет сотрудников</p>
@@ -1015,7 +1017,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
           </thead>
 
           <tbody>
-            {employees.map((employee) => (
+            {vacations.map((employee) => (
               <EmployeeRow
                 key={employee.id}
                 employee={employee}
@@ -1043,7 +1045,7 @@ export default function EmployeeTable({ employees, currentUserId }: EmployeeTabl
             }}
             onClick={() => setPopover(null)}>
             {(() => {
-              const employee = employees.find((e) => e.id === popover.employeeId);
+              const employee = vacations.find((e) => e.id === popover.employeeId);
               if (!employee) return null;
 
               const { available, additional } = calculateAvailableDays(employee, popover.date);

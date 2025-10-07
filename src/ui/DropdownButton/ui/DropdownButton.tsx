@@ -1,23 +1,10 @@
 'use client';
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ChevronDown } from 'lucide-react';
 
-export interface DropdownItem {
-  id: string;
-  label?: string;
-  icon?: ReactNode;
-  onClick?: () => void;
-  divider?: boolean;
-  disabled?: boolean;
-}
-
-interface DropdownButtonProps {
-  label: ReactNode;
-  items: DropdownItem[];
-  className?: string;
-}
+import { DropdownButtonProps } from '@/ui/DropdownButton/types/types';
 
 export function DropdownButton({ label, items, className }: DropdownButtonProps) {
   const [open, setOpen] = useState(false);

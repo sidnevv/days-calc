@@ -1,10 +1,13 @@
-import { SaveVacationRangesRequest } from '@/types';
+import { SaveVacationRangesRequest, VacationEmployee } from '@/types';
 
 import { apiSlice } from './apiSlice';
 
 export const vacationsApi = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
+    getVacationEmployees: builder.query<VacationEmployee[], void>({
+      query: () => '/vacations',
+    }),
     SaveVacationRanges: builder.mutation<{ success: boolean }, SaveVacationRangesRequest>({
       query: ({ id, year, ranges }) => ({
         url: `/vacations/save`,
@@ -32,4 +35,8 @@ export const vacationsApi = apiSlice.injectEndpoints({
   }),
 });
 
-export const { useSaveVacationRangesMutation, useDeleteVacationRangesMutation } = vacationsApi;
+export const {
+  useGetVacationEmployeesQuery,
+  useSaveVacationRangesMutation,
+  useDeleteVacationRangesMutation,
+} = vacationsApi;

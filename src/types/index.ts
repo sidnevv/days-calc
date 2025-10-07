@@ -1,8 +1,11 @@
 export type { User } from './auth';
+export type { Employee } from './employee';
 export type {
-  PositionChange,
+  SaveVacationRangesRequest,
+  VacationRange,
+  EmployeeSelection,
+  VacationEmployee,
   EmployeeWithVacation,
-  Employee,
   VacationCalculation,
-} from './employee';
-export type { SaveVacationRangesRequest, VacationRange, EmployeeSelection } from './vacation';
+  PositionChange,
+} from './vacation';

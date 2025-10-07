@@ -1,36 +1,11 @@
-import { SaveVacationRangesRequest } from '@/types/vacation';
-
-export interface PositionChange {
-  fromDate: string;
-  toDate: string | null;
-  position: string;
-  vacationDaysPerYear: number;
-  additionalDaysPerYear: number;
-}
-
-export interface VacationRange extends SaveVacationRangesRequest {
-  duration: number;
-}
 export interface Employee {
   id: number;
-  name: string;
+  displayName: string;
+  number: number;
+  department: string;
   position: string;
   hireDate: string;
-  vacationDaysPerYear: number;
-  usedVacationDays: number;
-  usedAdditionalDays: number;
-  positionChanges: PositionChange[];
-  vacationRanges: VacationRange[];
-}
-
-export interface VacationCalculation {
-  earnedDays: number;
-  availableDays: number;
-  additionalDays: number;
-  availableAdditionalDays: number;
-  totalAvailableDays: number;
-}
-
-export interface EmployeeWithVacation extends Employee {
-  vacation: VacationCalculation;
+  used_vacation_days: number;
+  used_additional_days: number;
+  status: string;
 }

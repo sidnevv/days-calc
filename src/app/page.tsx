@@ -5,21 +5,22 @@ import { useRouter } from 'next/navigation';
 import { Menu, Settings, User } from 'lucide-react';
 
 import { ErrorHandler } from '@/components/common/ErrorHandler';
+import { Header } from '@/components/layout/Header';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { UserCard } from '@/components/layout/UserCard';
+import VacationsTable from '@/components/vacations/VacationsTable';
 import { useGetCurrentUserQuery } from '@/lib/api/authApi';
-import { useGetEmployeesQuery } from '@/lib/api/employeeApi';
+import { useGetVacationEmployeesQuery } from '@/lib/api/vacationsApi';
 import { calculateVacationDaysSimple } from '@/lib/utils/calculations';
-import { Employee } from '@/types';
+import { VacationEmployee } from '@/types/vacation';
 import { DropdownButton, DropdownItem } from '@/ui/DropdownButton';
 
-import EmployeeTable from '../components/employees/EmployeeTable';
-
 export default function Home() {
-  const { data, error, isLoading } = useGetEmployeesQuery();
+  const { data, error, isLoading } = useGetVacationEmployeesQuery();
   const { data: user } = useGetCurrentUserQuery();
   const router = useRouter();
 
-  const employees = data?.map((emp: Employee) => ({
+  const vacations = data?.map((emp: VacationEmployee) => ({
     ...emp,
     vacation: calculateVacationDaysSimple(emp),
   }));
@@ -50,19 +51,9 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col p-3">
-      <ErrorHandler error={error} />
-      <div className="flex item-center justify-between mb-4 gap-2">
-        <div>
-          <DropdownButton label={<Menu size={20} />} items={menuItems} />
-        </div>
-        <div className="flex justify-end">
-          <UserCard user={user!} />
-        </div>
-      </div>
-
-      {employees && employees.length > 0 ? (
-        <EmployeeTable employees={employees} currentUserId={user!.id} />
+    <PageLayout user={user!} isLoading={isLoading} error={error}>
+      {vacations && vacations.length > 0 ? (
+        <VacationsTable vacations={vacations} currentUserId={user!.id} />
       ) : (
         !error && (
           <div className="bg-gray-100 border border-gray-200 rounded-md p-4 text-center">
@@ -70,6 +61,23 @@ export default function Home() {
           </div>
         )
       )}
-    </div>
+    </PageLayout>
   );
+
+  // return (
+  //   <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col p-3">
+  //     <ErrorHandler error={error} />
+  //     <Header user={user!} />
+  //
+  //     {vacations && vacations.length > 0 ? (
+  //       <VacationsTable vacations={vacations} currentUserId={user!.id} />
+  //     ) : (
+  //       !error && (
+  //         <div className="bg-gray-100 border border-gray-200 rounded-md p-4 text-center">
+  //           <p className="text-gray-600">Нет данных о сотрудниках</p>
+  //         </div>
+  //       )
+  //     )}
+  //   </div>
+  // );
 }

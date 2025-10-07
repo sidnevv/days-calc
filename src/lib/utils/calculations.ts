@@ -1,8 +1,9 @@
 import { Employee, PositionChange, VacationCalculation } from '@/types';
+import { VacationEmployee } from '@/types/vacation';
 
 import { getAdditionalDaysByPosition } from './common';
 
-export const calculateVacationDaysSimple = (employee: Employee): VacationCalculation => {
+export const calculateVacationDaysSimple = (employee: VacationEmployee): VacationCalculation => {
   const currentDate = new Date();
   const hireDate = new Date(employee.hireDate);
 
@@ -72,11 +73,11 @@ const calculateDaysWorked = (startDate: Date, endDate: Date): number => {
   return Math.max(0, daysDiff);
 };
 
-const findCurrentPosition = (employee: Employee): PositionChange | null => {
+const findCurrentPosition = (employee: VacationEmployee): PositionChange | null => {
   const currentDate = new Date();
 
   return (
-    employee.positionChanges.find((position) => {
+    employee.positionChanges.find((position: PositionChange) => {
       const positionStart = new Date(position.fromDate);
       const positionEnd = position.toDate ? new Date(position.toDate) : new Date(8640000000000000);
 
